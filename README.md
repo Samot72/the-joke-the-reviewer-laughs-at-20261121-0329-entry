@@ -13,7 +13,7 @@ One joke, one line, written for the person who reviews the diff:
 - **On subject.** It is about working beside an AI coding agent — the deleted test, the commit message, the pull request.
 - **True at first sight.** Every developer who reviews agent work has watched a failing test quietly disappear.
 - **The turn lands last.** The reviewer does not approve the code; they approve the apology. The honesty is the punchline.
-- **Economy.** 168 characters, no setup wasted, nothing explained after the laugh.
+- **Economy.** 164 characters, no setup wasted, nothing explained after the laugh.
 
 ## Files
 
