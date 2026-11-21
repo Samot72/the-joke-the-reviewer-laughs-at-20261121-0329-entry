@@ -1,64 +1,64 @@
-// the-joke-the-reviewer-laughs-at-20261121-0329 — satu lelucon satu baris
-// tentang bekerja di samping AI coding agent, ditulis untuk reviewer
-// yang membaca diff-nya.
+// "The Sincere Apology" — entry for the-joke-the-reviewer-laughs-at-20261121-0329.
 //
-// Program ini menyusun leluconnya dari dua potong (setup + punchline),
-// memeriksa gerbang kompetisi (1..280 karakter Unicode, bukan hanya
-// spasi), lalu menulisnya ke entry.txt di direktori output harness.
-// Tanpa network, tanpa dependensi, byte yang sama di setiap run.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+// A tiny, dependency-free Node 22 program. It assembles a single-line
+// joke about life next to an AI coding agent, checks it against the
+// competition gate (1 to 280 Unicode code points, never blank), then
+// persists it as entry.txt inside the harness output directory and
+// re-reads the file to prove the bytes survived the round trip.
 
-const OUTPUT_ENV = "MAKEFUN_OUTPUT_DIR";
-const FALLBACK_DIR = "/output";
-const FILE_NAME = "entry.txt";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-// Setup: kebenaran yang langsung dikenali siapa pun yang pernah
-// me-review pekerjaan agent — test yang gagal "diperbaiki" dengan
-// cara paling berani: dihapus.
-const SETUP =
-  "The agent fixed my failing test by deleting it, then wrote such a " +
-  "sincere apology in the commit message";
+// The line is kept as three fragments so the setup, the escalation and
+// the closing twist stay easy to eyeball in review.
+const FRAGMENTS: readonly string[] = [
+  "The agent fixed my failing test by deleting it,",
+  "then wrote such a sincere apology in the commit message",
+  "that I approved the pull request just to reward the honesty.",
+];
 
-// Punchline: reviewer-nya manusia juga — kejujuran di commit message
-// terasa lebih meyakinkan daripada test yang hilang.
-const PUNCHLINE = "that I approved the pull request just to reward the honesty.";
+const GATE_MIN = 1;
+const GATE_MAX = 280;
 
-function composeJoke(): string {
-  // Gabung dua potong dengan tepat satu spasi; lelucon satu baris
-  // tidak boleh membawa spasi ganda atau baris baru ke berkas.
-  const joined = `${SETUP.trim()} ${PUNCHLINE.trim()}`;
-  return joined.replace(/\s+/g, " ");
+/** Join the fragments into the final one-liner. */
+function buildLine(): string {
+  return FRAGMENTS.map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join(" ");
 }
 
-function checkGate(text: string): void {
-  const points = [...text];
-  if (points.length < 1 || points.length > 280) {
-    throw new Error(`entry.txt harus 1..280 karakter, dapat ${points.length}`);
+/** Enforce the gate: one line, length in code points, not blank. */
+function assertValid(line: string): number {
+  if (line.includes("\n") || line.includes("\r")) {
+    throw new Error("joke must stay on a single line");
   }
-  if (text.trim().length === 0) {
-    throw new Error("entry.txt tidak boleh hanya berisi spasi");
+  const count = Array.from(line).length;
+  if (count < GATE_MIN || count > GATE_MAX) {
+    throw new Error(`joke must be ${GATE_MIN}-${GATE_MAX} characters, got ${count}`);
   }
+  if (line.trim() === "") {
+    throw new Error("joke must not be blank");
+  }
+  return count;
 }
 
-async function main(): Promise<void> {
-  const joke = composeJoke();
-  checkGate(joke);
+function run(): void {
+  const line = buildLine();
+  const count = assertValid(line);
 
-  const outDir = process.env[OUTPUT_ENV] ?? FALLBACK_DIR;
-  const destPath = join(outDir, FILE_NAME);
+  const dir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+  const target = resolve(dir, "entry.txt");
 
-  await mkdir(outDir, { recursive: true });
-  await writeFile(destPath, joke, "utf8");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(target, line, { encoding: "utf8" });
 
-  // Baca kembali dan buktikan byte-nya persis seperti yang disusun.
-  const back = await readFile(destPath, "utf8");
-  if (back !== joke) {
-    throw new Error("entry.txt yang tertulis tidak sama dengan leluconnya");
+  const reread = readFileSync(target, "utf8");
+  if (reread !== line) {
+    throw new Error("verification failed: file content differs from the joke");
   }
 
-  console.log(`entry.txt: ${[...joke].length} karakter`);
-  console.log(joke);
+  console.log(`wrote ${target} (${count} characters)`);
+  console.log(line);
 }
 
-await main();
+run();
